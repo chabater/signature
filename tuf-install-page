@@ -1,0 +1,27 @@
+好的，以下是建置 TUF 服務的確切作法及驗證：
+
+下載 TUF 原始碼
+git clone https://github.com/theupdateframework/tuf.git
+cd tuf
+
+安裝 TUF
+pip install .
+
+建立 TUF 資料夾結構
+cd examples/repository-tool/
+./create_tuf_repository.sh /path/to/repository
+
+建立 TUF 根密鑰
+./generate_root.py -o /path/to/root.json
+
+建立 TUF 金鑰
+./generate_key.py -o /path/to/targets_key.pem
+
+建立 TUF 鏈接
+./create_tuf_links.sh /path/to/repository
+
+驗證 TUF 建置是否成功
+tuf --version
+你可以參考 TUF 的官方文件進一步了解如何配置和使用 TUF 服務。
+
+希望這能幫助到你。

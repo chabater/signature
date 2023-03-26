@@ -1,0 +1,30 @@
+好的，以下是在本地建置 Rekor 服務的步驟和命令：
+
+安裝 Redis 和 Go 環境
+在建置 Rekor 服務前，需要先安裝 Redis 和 Go 環境，可以參考以下連結進行安裝：
+
+Redis：https://redis.io/download
+Go：https://golang.org/doc/install
+下載 Rekor 原始碼
+可以使用 git 命令從 Rekor 的 Github 倉庫中下載原始碼，命令如下：
+
+git clone https://github.com/sigstore/rekor.git
+配置 Rekor Server 和 Redis 資料庫
+進入 Rekor 原始碼目錄，使用以下命令進行配置：
+
+cd rekor
+make setup-dev
+該命令會自動下載所需的依賴庫並配置 Rekor Server 和 Redis 資料庫，需要等待一段時間。
+
+啟動 Rekor Server
+在完成配置後，可以使用以下命令啟動 Rekor Server：
+
+make run-dev
+驗證 Rekor Server 是否正常運行
+可以使用 curl 命令測試 Rekor Server 是否正常運行，命令如下：
+
+curl http://localhost:3000/healthz
+如果顯示以下訊息，則表示 Rekor Server 正常運行：
+
+{"status":"ok"}
+希望這些步驟和命令對你有所幫助。

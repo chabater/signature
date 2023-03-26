@@ -1,0 +1,57 @@
+以下是在 Ubuntu 20.04 上建立 Trillian Server 和 MySQL 資料庫的基本步驟：
+
+下載 Trillian 源代碼：
+$ git clone https://github.com/google/trillian.git
+
+安裝必要的依賴項：
+$ sudo apt-get install build-essential git golang-go
+
+在 Trillian 目錄下創建一個名為 "go.mod" 的文件：
+$ cd trillian/
+$ go mod init github.com/google/trillian
+
+編譯 Trillian Server：
+$ go build ./server/trillian_server/
+
+創建 Trillian Server 的數據庫：
+$ mysql -u root -p -e 'CREATE DATABASE trillian'
+$ mysql -u root -p trillian < ./integration/mysql/schema/storage_mysql.sql
+
+創建 Trillian Server 配置文件：
+$ cp ./examples/deployment_map/trillian_server_map.yaml ./trillian_server_map.yaml
+
+在配置文件中設置數據庫和其他必要的參數。這裡給出一個簡單的示例：
+mysql:
+  db_name: trillian
+  db_user: root
+  db_pass: password
+
+rpc_server:
+  listen_port: 8090
+  tls_cert_file: "testdata/server.pem"
+  tls_key_file: "testdata/server-key.pem"
+
+log_rpc_server:
+  listen_port: 8091
+  tls_cert_file: "testdata/server.pem"
+  tls_key_file: "testdata/server-key.pem"
+
+admin_server:
+  listen_port: 8092
+
+啟動 Trillian Server：
+$ ./trillian_server --logtostderr --config_file=./trillian_server_map.yaml
+
+檢查 Trillian Server 是否正在運行：
+$ curl http://localhost:8090/v1beta1/healthz
+這應該會返回一個 JSON 格式的響應，指示服務器正常運行。
+
+(可選) 啟動 Trillian 的 Log Server：
+如果您需要使用 Trillian 的 Log 功能，您需要在另一個終端中啟動 Log Server：
+
+$ go run ./cmd/trillian_log_server/main.go --rpc_endpoint=localhost:8090 --http_endpoint=localhost:8091 --logtostderr
+(可選) 檢查 Log Server 是否正在運行：
+$ curl http://localhost:8091/v1beta1/healthz
+這應該會返回一個 JSON 格式的響應，指示服務器正常運行。
+
+以上是在 Ubuntu 20.04 上安裝 Trillian Server 和 MySQL 資料庫的基本步驟，您需要根據您的系統和需求進行調整。

@@ -1,0 +1,347 @@
+以下是在本機上建置 Fulcio 服務的步驟和指令：
+
+安裝 Go 和 git
+Fulcio 使用 Go 語言開發，因此需要安裝 Go，另外也需要安裝 git 來下載源碼。
+
+下載 Fulcio 源碼
+執行以下指令來下載 Fulcio 源碼：
+
+git clone https://github.com/google/fulcio.git
+
+安裝 CT Log
+Fulcio 使用 CT Log 來存儲 X.509 憑證數據，需要先安裝 CT Log。
+
+執行以下指令來下載 CT Log 源碼：
+
+git clone https://github.com/google/trillian-examples.git
+切換到 CT Log 目錄：
+
+cd trillian-examples
+cd ct
+使用 Docker 構建 CT Log 映像：
+
+docker build -t ct-server .
+啟動 CT Log 容器：
+
+docker run -d --name ct-server -p 6962:6962 ct-server
+安裝 Trillian
+Fulcio 使用 Trillian 作為後端記錄系統，需要先安裝 Trillian。
+
+執行以下指令來下載 Trillian 源碼：
+
+git clone https://github.com/google/trillian.git
+切換到 Trillian 目錄：
+
+cd trillian
+使用 Bazel 構建 Trillian 服務：
+
+bazel build //trillian/cmd/...
+安裝 MySQL
+Fulcio 需要使用 MySQL 數據庫存儲 Trillian 的元數據，需要先安裝 MySQL。
+
+執行以下指令安裝 MySQL：
+
+sudo apt-get update
+sudo apt-get install mysql-server
+創建 Trillian 數據庫
+執行以下指令創建 Trillian 數據庫：
+
+mysql -u root -p < trillian/deployment/sql/mysql/storage.sql
+創建 Trillian 配置文件
+在 Trillian 目錄下創建一個新文件夾 deployments，然後創建一個 Trillian 配置文件 fulcio.cfg，內容如下：
+[server]
+cert = path/to/fulcio.crt
+key = path/to/fulcio.key
+listen = 0.0.0.0:8080
+log_level = INFO
+secret_key = REPLACE_WITH_RANDOM_SECRET_KEY
+database_uri = mysql+pymysql://fulcio:fulcio@localhost/fulcio
+key_store_path = /path/to/keystore
+
+其中：
+
+cert 和 key 分別指定了 Fulcio 服務的 SSL/TLS 憑證和私鑰的路徑。
+listen 指定了 Fulcio 服務監聽的 IP 地址和端口號。
+log_level 指定了 Fulcio 服務日誌的等級。
+secret_key 指定了用於 JWT 簽名和解密的密鑰，需要是一個隨機生成的字符串，這裡需要自己填寫。
+database_uri 指定了 Fulcio 服務使用的 MySQL 資料庫的 URI，需要根據自己的情況修改。
+key_store_path 指定了存儲密鑰的路徑，需要自己創建一個目錄並填寫其路徑。
+
+
+接下来，你需要配置 Fulcio Server。
+
+首先，进入 Fulcio Server 的目录。
+cd fulcio-server
+
+根据官方文档中的说明，创建一个名为 .env 的文件，用于配置环境变量。可以使用 nano 或其他编辑器打开该文件。
+nano .env
+
+配置环境变量。以下是一个示例 .env 文件：
+APP_NAME=Fulcio
+APP_ENV=production
+APP_KEY=base64:jgfeU5Lt6UfD6L1XMg8pKw/qyqbAMRlyvoEshMKJIb8=
+APP_DEBUG=false
+APP_URL=https://fulcio.example.com
+APP_LOG_LEVEL=info
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=fulcio
+DB_USERNAME=fulcio
+DB_PASSWORD=fulcio
+
+CACHE_DRIVER=redis
+QUEUE_CONNECTION=redis
+
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+FULCIO_SERVER_ADDRESS=:8080
+FULCIO_TRILLIAN_LOG_SERVER=trillian-logs.example.com
+FULCIO_TUF_REPO_ROOT_KEY=460e9aa524805f0a0d745c619b63065dd4982758db4801f62d94e6a7d08f9c2a
+FULCIO_TUF_ROOT_ROTATION_FREQUENCY=3600
+FULCIO_TUF_MAX_ROOT_ROTATIONS=10
+FULCIO_TUF_SNAPSHOT_FREQUENCY=3600
+FULCIO_TUF_TARGETS_ROTATION_FREQUENCY=3600
+FULCIO_TUF_MAX_TARGETS_ROTATIONS=10
+FULCIO_TUF_DELEGATION_ROTATION_FREQUENCY=3600
+FULCIO_TUF_MAX_DELEGATION_ROTATIONS=10
+FULCIO_TUF_METADATA_DIRECTORY=tuf-metadata
+
+FULCIO_CT_SERVER=https://ct.example.com
+FULCIO_CT_SCTS=false
+
+FULCIO_OIDC_ISSUER=https://fulcio.example.com/auth/realms/Fulcio
+FULCIO_OIDC_AUDIENCE=fulcio-client
+FULCIO_OIDC_CLIENT_ID=fulcio-client
+FULCIO_OIDC_CLIENT_SECRET=secret
+FULCIO_OIDC_SIGNING_ALG=ES256
+FULCIO_OIDC_SIGNING_KEY_PATH=keys/oidc_signing_key
+FULCIO_OIDC_ENCRYPTION_ALG=RSA-OAEP
+FULCIO_OIDC_ENCRYPTION_KEY_PATH=keys/oidc_encryption_key
+
+FULCIO_OIDC_USERINFO_DB_DRIVER=mysql
+FULCIO_OIDC_USERINFO_DB_HOST=127.0.0.1
+FULCIO_OIDC_USERINFO_DB_PORT=3306
+FULCIO_OIDC_USERINFO_DB_DATABASE=fulcio
+FULCIO_OIDC_USERINFO_DB_USERNAME=fulcio
+FULCIO_OIDC_USERINFO_DB_PASSWORD=fulcio
+这里需要注意的是，这里的 FULCIO_TRILLIAN_LOG_SERVER、FULCIO_CT_SERVER 和 FULCIO_OIDC_ISSUER 参数需要配置成你的 Trillian、CT Log 和 Keycloak 服务的地址。
+
+在完成 Fulcio Server 和 CT Log 的配置后，您需要使用以下命令来构建 Fulcio Server 的 Docker 镜像：
+
+ruby
+Copy code
+$ docker build -t fulcio-server:latest .
+在运行此命令之前，请确保您的当前工作目录是 Fulcio 服务器源代码的根目录，并且已经安装了 Docker。
+
+这个命令将使用 Dockerfile 中的指令来创建一个 Docker 镜像。在构建完成后，您可以使用以下命令来启动 Fulcio Server 容器：
+
+yaml
+Copy code
+$ docker run -p 8080:8080 -p 8090:8090 fulcio-server:latest
+这个命令将在您的本地机器上启动一个 Fulcio Server 容器，并将端口 8080 和 8090 映射到容器内的相应端口。您可以通过访问 http://localhost:8080/ 来访问 Fulcio Server。
+
+
+======================================================================================================
+接下来，在 Fulcio 目录下创建一个名为 fulcio-config.yaml 的文件，并将以下内容复制到文件中：
+
+# Configuration for fulcio server
+
+# Database configuration
+database:
+  type: "mysql"
+  host: "127.0.0.1:3306"
+  user: "root"
+  password: "fulciopassword"
+  name: "fulcio"
+
+# TUF configuration
+tuf:
+  repository_directory: "/tuf/repository"
+  targets_directory: "/tuf/targets"
+  metadata_directory: "/tuf/metadata"
+  threshold: 1
+
+# Trillian configuration
+trillian:
+  log_id: 1
+  log_url: "http://127.0.0.1:8090"
+  public_key: "MBswDQYJKoZIhvcNAQEBBQADSgAwRwJAXJbBRfLyLziZExz/bJwGbsCnBf1vd/e+kkYZbJ2x9E22G6hysm6vKU6llQd6cLz5y5JFvP05lJxO9X1aSjN8wIDAQAB"
+
+# OIDC configuration
+oidc:
+  client_id: "fulcio-client"
+  client_secret: "fulcio-secret"
+  issuer_url: "http://localhost:8080/auth/realms/fulcio"
+  redirect_uri: "http://localhost:5000/oauth/callback"
+
+# Server configuration
+server:
+  port: 5000
+  cert_file: "cert.pem"
+  key_file: "key.pem"
+
+
+============================================================================================================
+
+mysql:
+  username: fulcio
+  password: password
+  address: "localhost:3306"
+  database: fulcio
+
+ct:
+  server:
+    address: "localhost:8090"
+    tlsCertFile: /etc/ssl/certs/fulcio-ct.crt
+    tlsKeyFile: /etc/ssl/private/fulcio-ct.key
+
+fulcio:
+  server:
+    port: 8080
+    # Add your server certificate and private key here
+    tlsCertFile: /etc/ssl/certs/fulcio.crt
+    tlsKeyFile: /etc/ssl/private/fulcio.key
+    issuer: https://fulcio.example.com
+    audience: https://fulcio.example.com
+
+  client:
+    id: https://keycloak.example.com/auth/realms/fulcio
+    secret: secret
+    # Add your keycloak server certificate here
+    keycloakCertFile: /etc/ssl/certs/keycloak.crt
+
+tuf:
+  root:
+    # Add your TUF root metadata here
+    keyIDs:
+      - "test-key-id"
+    threshold: 1
+    role:
+      - "root"
+      - "targets"
+      - "snapshot"
+      - "timestamp"
+    rootKeys:
+      - |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzvDRZnTNbH7Vju9Wcwwi
+        pJKHrEZHULVfsrWzgRn2QD4iH0d9fRKgMxR1Gc0wnpIbfPBy9zD7T0xK96wTNdGi
+        A2hNWWG1OmZ/0sV8ymf9k+z41TzowuMJWrWwNzQOn/f+WjrBt7Q2tZ+Lfw7d/pYR
+        7fajcHyqBrSM+1FvgPiSov+LpdCfRoq3HDB5v5X1+4F2A4wtWwEASadlhRazPZU7
+        YEGW6F8QvY/r/fyOe1CEx0ud0A8PvUfHkZS5oJz5ib+q5X5v4F4mSLJxQjBm/T/E
+        vJl+hZUtuAW6F8W6Yj2vZZeN6fN1xU8W/JNlfjvZrywmkb55gnfBh8JTY9sA9T7T
+        LwIDAQAB
+        -----END PUBLIC KEY-----
+    rootThreshold: 1
+
+  snapshot:
+    # Add your TUF snapshot metadata here
+    keyIDs:
+      - "test-key-id"
+    threshold: 1
+    role:
+      - "snapshot"
+    rootKeys:
+      - |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzvDRZnTNbH7Vju9Wcwwi
+        pJKHrEZHULVfsrWzgRn2QD4iH0d9fRKgM
+======================================================================================================
+
+接下來需要配置和安裝Fulcio Server和CT Log。
+
+配置Fulcio Server：
+
+前往Fulcio Server的源代码库，并下载源代码。
+使用以下命令进行编译：
+go build ./cmd/fulcio-server
+
+创建配置文件fulcio_server_config.yaml，其中包括以下内容：
+log-config:
+  log-url: "https://<YOUR_TRILLIAN_LOG_URL>/v1beta1/logs/<YOUR_CT_LOG_ID>"
+keys-config:
+  root-key-snapshot-version: 1
+  targets-key-snapshot-version: 1
+  snapshot-key-snapshot-version: 1
+  timestamp-key-snapshot-version: 1
+  root-consistent-snapshot: true
+  targets-consistent-snapshot: true
+  snapshot-consistent-snapshot: true
+  timestamp-consistent-snapshot: true
+oidc-config:
+  issuer: "https://fulcio.<YOUR_DOMAIN>/"
+  client-id: "<YOUR_OIDC_CLIENT_ID>"
+  client-secret: "<YOUR_OIDC_CLIENT_SECRET>"
+  redirect-url: "https://fulcio.<YOUR_DOMAIN>/callback"
+  userinfo-endpoint: "https://keycloak.<YOUR_DOMAIN>/auth/realms/<YOUR_REALM_NAME>/userinfo"
+  token-endpoint: "https://keycloak.<YOUR_DOMAIN>/auth/realms/<YOUR_REALM_NAME>/protocol/openid-connect/token"
+  auth-endpoint: "https://keycloak.<YOUR_DOMAIN>/auth/realms/<YOUR_REALM_NAME>/protocol/openid-connect/auth"
+
+在上面的配置文件中，请注意以下参数：
+<YOUR_TRILLIAN_LOG_URL>: 指向Trillian Log的URL。
+<YOUR_CT_LOG_ID>: 在Trillian上创建的CT日志的ID。
+<YOUR_DOMAIN>: 您的域名。
+<YOUR_OIDC_CLIENT_ID>: 在Keycloak上创建的OIDC客户端的ID。
+<YOUR_OIDC_CLIENT_SECRET>: 在Keycloak上创建的OIDC客户端的密钥。
+<YOUR_REALM_NAME>: Keycloak上的Realm名称。
+
+运行Fulcio Server：
+./fulcio-server --config-file=fulcio_server_config.yaml --logtostderr
+配置CT Log：
+
+前往Trillian源代码库，并下载源代码。
+使用以下命令进行编译：
+go build ./server/trillian_log_server/
+
+创建配置文件ct_server.cfg，其中包括以下内容：
+rpc_server_port: <YOUR_PORT>
+log_rpc_server_port: <YOUR_LOG_RPC_PORT>
+mysql_db_name: "<YOUR_MYSQL_DB_NAME>"
+mysql_db_user: "<YOUR_MYSQL_DB_USER>"
+mysql_db_password: "<YOUR_MYSQL_DB_PASSWORD>"
+在上面的配置文件中，请注意以下参数：
+<YOUR_PORT>: CT Log服务器的RPC端口号。
+<YOUR_LOG_RPC_PORT>: CT Log服务器的日志RPC端口号。
+<YOUR_MYSQL_DB_NAME>: MySQL数据库的名称。
+<YOUR_MYSQL_DB_USER>: MySQL数据库的用户名。
+<YOUR_MYSQL_DB_PASSWORD>: MySQL数据库的密码。
+
+创建MySQL数据库并运行以下命令以初始化CT日志：
+./trillian_log_server init --config_file=ct_server.cfg
+
+接下來，你需要配置 Fulcio Server。首先，使用以下命令從 GitHub 下載 Fulcio 原始碼：
+
+git clone https://github.com/google/fulcio.git
+然後，切換到 fulcio/server 目錄並運行以下命令安裝必要的依賴項：
+
+cd fulcio/server
+go mod download
+接下來，你需要創建一個名為 config.yaml 的配置文件，該文件將配置 Fulcio Server。以下是一個基本的配置範例：
+
+http_port: 8080
+grpc_port: 50051
+log_url: http://localhost:8090
+tuf_server_url: http://localhost:8001
+log_mode: local
+db_uri: "mysql://fulcio:password@localhost:3306/fulcio"
+certificate_duration: 86400
+renew_before_expiry: 3600
+api_keys:
+  - key: "my_api_key"
+    comment: "a sample api key"
+在這個配置文件中，你需要指定 Fulcio Server 監聽的 HTTP 和 gRPC 端口，以及 TUF 服務器和 Trillian 日誌的 URL。此外，你還需要配置數據庫 URI、憑證的有效期和提前更新時間，以及 API 密鑰。你可以在配置文件中指定多個 API 密鑰，每個密鑰都有一個可選的注釋。注意，這些 API 密鑰將用於認證向 Fulcio Server 發送的請求。
+
+在創建了配置文件之後，你可以使用以下命令運行 Fulcio Server：
+
+go run ./cmd/server/main.go -config=config.yaml
+如果一切正常，你應該會看到類似以下的輸出：
+
+INFO[0000] Setting up log client
+INFO[0000] Dialing Trillian Log RPC client on [localhost:8090]
+INFO[0000] Running server listening on port :8080
+INFO[0000] Running gRPC server listening on port :50051
+這表明 Fulcio Server 已經成功啟動。現在，你可以使用 OIDC 客戶端與 Fulcio Server 進行交互，該客戶端將通過 TUF 服務器驗證 X.509 憑證並將驗證日誌存儲到 Trillian 中。

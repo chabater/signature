@@ -1,0 +1,66 @@
+以下是建置 Fulcio 驗證 OIDC 需要的 Keycloak 的確切作法：
+
+下載 Keycloak：
+wget https://downloads.jboss.org/keycloak/15.0.2/keycloak-15.0.2.tar.gz
+tar xvfz keycloak-15.0.2.tar.gz
+
+建立 Keycloak 管理員帳號和密碼：
+cd keycloak-15.0.2/bin
+./add-user.sh -u admin -p password
+
+啟動 Keycloak 服務：
+cd ..
+./bin/standalone.sh -Djboss.http.port=8081 -Djboss.https.port=8444
+
+登入 Keycloak 管理控制台：
+使用瀏覽器打開 http://localhost:8081/auth，輸入帳號 admin 和密碼 password 登入管理控制台。
+
+建立 Realm：
+在管理控制台中，點擊 "Add realm" 按鈕，在彈出的視窗中輸入 "fulcio" 作為新建的 Realm 名稱，點擊 "Create" 按鈕。
+
+建立 Client：
+在新建的 "fulcio" Realm 中，點擊 "Clients" 選單，再點擊 "Create" 按鈕，在彈出的視窗中填寫以下資訊：
+
+Client ID: fulcio
+Client Protocol: openid-connect
+Root URL: http://localhost:8080/fulcio
+Valid Redirect URIs: http://localhost:8080/fulcio/*
+點擊 "Save" 按鈕完成 Client 的建立。
+
+建立 User：
+在 "fulcio" Realm 中，點擊 "Users" 選單，再點擊 "Add user" 按鈕，在彈出的視窗中填寫以下資訊：
+
+Username: alice
+Email: alice@example.com
+Enabled: On
+點擊 "Save" 按鈕完成 User 的建立。
+
+設定 User 密碼：
+在 "fulcio" Realm 中，點擊 "Credentials" 選單，將 "Temporary" 選項切換為 "Set Password"，在彈出的視窗中設定密碼為 "password"。
+
+建立 Group：
+在 "fulcio" Realm 中，點擊 "Groups" 選單，再點擊 "New" 按鈕，在彈出的視窗中填寫以下資訊：
+
+Name: fulcio-users
+點擊 "Create" 按鈕完成 Group 的建立。
+
+將 User 加入 Group：
+在 "fulcio-users" Group 中，點擊 "Membership" 選單，將 "alice" User 加入 Group。
+
+設定 Client Scope：
+在 "fulcio" Realm 中，
+
+在建置 Fulcio 驗證 OIDC 需要的 Keycloak 之後，你可以使用以下步驟配置 Fulcio 服務以使用 Keycloak 進行驗證：
+
+編輯 fulcio-config.yaml 文件，將以下內容添加到 authentication 部分：
+  keycloak:
+    server_url: <Keycloak_Server_URL>
+    realm_name: <Keycloak_Realm_Name>
+    client_id: <Keycloak_Client_ID>
+    client_secret: <Keycloak_Client_Secret>
+將 <Keycloak_Server_URL> 替換為你 Keycloak 服務的 URL，<Keycloak_Realm_Name> 替換為你的 Keycloak 領域名稱，<Keycloak_Client_ID> 替換為你創建的 Keycloak 客戶端 ID，<Keycloak_Client_Secret> 替換為你創建的 Keycloak 客戶端密鑰。
+
+使用以下命令啟動 Fulcio 服務：
+$ fulcio serve --config fulcio-config.yaml
+現在你已經成功配置了 Fulcio 服務以使用 Keycloak 進行驗證，可以使用 OpenID Connect 訪問 Fulcio 服務了。
+注意：在使用 Keycloak 進行驗證之前，需要在 Keycloak 中創建一個領域和客戶端，並配置 OIDC。你可以參考 Keycloak 的官方文檔進行操作。
