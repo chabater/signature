@@ -1,0 +1,660 @@
+NAME: trillian-1679797881
+LAST DEPLOYED: Sun Mar 26 02:31:21 2023
+NAMESPACE: default
+STATUS: pending-install
+REVISION: 1
+TEST SUITE: None
+USER-SUPPLIED VALUES:
+{}
+
+COMPUTED VALUES:
+createdb:
+  dbname: trillian
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+    registry: ghcr.io
+    repository: sigstore/scaffolding/createdb
+    version: sha256:9aa98492115c465b0cecfd6dbb04411a40c0d2d7e5d7c510f5646bd1d825e3c7
+  name: createdb
+  serviceAccount:
+    annotations: {}
+    create: false
+    name: ""
+  ttlSecondsAfterFinished: 3600
+forceNamespace: ""
+initContainerImage:
+  curl:
+    imagePullPolicy: IfNotPresent
+    registry: docker.io
+    repository: curlimages/curl
+    version: sha256:9fab1b73f45e06df9506d947616062d7e8319009257d3a05d970b0de80a41ec5
+  netcat:
+    imagePullPolicy: IfNotPresent
+    registry: docker.io
+    repository: toolbelt/netcat
+    version: sha256:7d921b6d368fb1736cb0832c6f57e426c161593c075847af3378eb3185801cea
+logServer:
+  enabled: true
+  extraArgs: []
+  image:
+    pullPolicy: IfNotPresent
+    registry: gcr.io
+    repository: projectsigstore/trillian_log_server
+    version: sha256:75dbbfc4c0b64334b985c4971fe58c30b9dd73d7aa54b15cee61223ff92aebf3
+  livenessProbe: {}
+  name: log-server
+  nodeSelector:
+    kubernetes.io/arch: amd64
+  portHTTP: 8090
+  portRPC: 8091
+  readinessProbe: {}
+  replicaCount: 1
+  resources: {}
+  service:
+    ports:
+    - name: 8091-tcp
+      port: 8091
+      protocol: TCP
+      targetPort: 8091
+    - name: 8090-tcp
+      port: 8090
+      protocol: TCP
+      targetPort: 8090
+    type: ClusterIP
+  serviceAccount:
+    annotations: {}
+    create: true
+    name: ""
+logSigner:
+  enabled: true
+  extraArgs: []
+  forceMaster: true
+  image:
+    pullPolicy: IfNotPresent
+    registry: gcr.io
+    repository: projectsigstore/trillian_log_signer
+    version: sha256:b56ed0b7b5e9813c91b208ba6041c9342f9a53162d96943374e59b5289090f1f
+  livenessProbe: {}
+  name: log-signer
+  nodeSelector:
+    kubernetes.io/arch: amd64
+  portHTTP: 8090
+  portRPC: 8091
+  readinessProbe: {}
+  replicaCount: 1
+  resources: {}
+  service:
+    ports:
+    - name: 8091-tcp
+      port: 8091
+      protocol: TCP
+      targetPort: 8091
+    type: ClusterIP
+  serviceAccount:
+    annotations: {}
+    create: true
+    name: ""
+mysql:
+  args:
+  - --ignore-db-dir=lost+found
+  auth:
+    existingSecret: ""
+    password: ""
+    rootPassword: ""
+    username: mysql
+  enabled: true
+  gcp:
+    cloudsql:
+      registry: gcr.io
+      repository: cloudsql-docker/gce-proxy
+      resources:
+        requests:
+          cpu: "1"
+          memory: 2Gi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+      version: sha256:7f53fe219f6815e275301561e2f8819e59e38eca5a93de644a287452f841fab7
+    enabled: false
+    instance: ""
+    scaffoldSQLProxy:
+      registry: ghcr.io
+      repository: sigstore/scaffolding/cloudsqlproxy
+      resources:
+        requests:
+          cpu: "1"
+          memory: 2Gi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+      version: sha256:2c818523a9060cdefca10af0804c8f60549bdc1744e71008f9849b23605c4ccf
+  hostname: ""
+  image:
+    pullPolicy: IfNotPresent
+    registry: gcr.io
+    repository: trillian-opensource-ci/db_server
+    version: sha256:22b7fddcb4bafc5692760d84dca5e86294363a94e8f0ecb8f5c39364d436e6d5
+  livenessProbe:
+    exec:
+      command:
+      - /etc/init.d/mysql
+      - status
+    failureThreshold: 3
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  name: mysql
+  persistence:
+    accessModes:
+    - ReadWriteOnce
+    annotations: {}
+    enabled: true
+    existingClaim: ""
+    mountPath: /var/lib/mysql
+    size: 5Gi
+    storageClass: null
+    subPath: ""
+  port: 3306
+  readinessProbe:
+    exec:
+      command:
+      - /etc/init.d/mysql
+      - status
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  replicaCount: 1
+  resources: {}
+  secret:
+    annotations: {}
+  service:
+    ports:
+    - name: 3306-tcp
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+    type: ClusterIP
+  serviceAccount:
+    annotations: {}
+    create: true
+    name: ""
+  strategy:
+    type: Recreate
+namespace:
+  create: false
+  name: trillian-system
+quotaSystem:
+  driver: mysql
+storageSystem:
+  driver: mysql
+  envCredentials: null
+
+HOOKS:
+MANIFEST:
+---
+# Source: trillian/templates/mysql/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-mysql
+  namespace: default
+  annotations:
+    {}
+---
+# Source: trillian/templates/trillian-log-server/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-log-server
+  namespace: default
+  annotations:
+    {}
+---
+# Source: trillian/templates/trillian-log-signer/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: "log-signer"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-log-signer
+  namespace: default
+  annotations:
+    {}
+---
+# Source: trillian/templates/mysql/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-mysql
+  namespace: default
+type: Opaque
+data:
+  mysql-root-password: "QXI0b05BT3VvdA=="
+  mysql-password: "TXJwdENHVk1QZw=="
+  mysql-user: "bXlzcWw="
+  mysql-database:  "dHJpbGxpYW4tMTY3OTc5Nzg4MQ=="
+---
+# Source: trillian/templates/mysql/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-mysql
+  namespace: default
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "5Gi"
+---
+# Source: trillian/templates/mysql/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-mysql
+  namespace: default
+spec:
+  ports:
+    - name: 3306-tcp
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+  type: "ClusterIP"
+---
+# Source: trillian/templates/trillian-log-server/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: "log-server"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-log-server
+  namespace: default
+spec:
+  ports:
+    - name: 8091-tcp
+      port: 8091
+      protocol: TCP
+      targetPort: 8091
+    - name: 8090-tcp
+      port: 8090
+      protocol: TCP
+      targetPort: 8090
+  selector:
+    app.kubernetes.io/component: "log-server"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+  type: "ClusterIP"
+---
+# Source: trillian/templates/trillian-log-signer/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: "log-signer"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-log-signer
+  namespace: default
+spec:
+  ports:
+    - name: 8091-tcp
+      port: 8091
+      protocol: TCP
+      targetPort: 8091
+  selector:
+    app.kubernetes.io/component: "log-signer"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+  type: "ClusterIP"
+---
+# Source: trillian/templates/mysql/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-mysql
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "mysql"
+      app.kubernetes.io/name: trillian
+      app.kubernetes.io/instance: trillian-1679797881
+  replicas: 1
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: "mysql"
+        app.kubernetes.io/name: trillian
+        app.kubernetes.io/instance: trillian-1679797881
+        helm.sh/chart: trillian-0.2.3
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: trillian-1679797881-mysql
+      containers:
+        - name: trillian-mysql
+          image: "gcr.io/trillian-opensource-ci/db_server@sha256:22b7fddcb4bafc5692760d84dca5e86294363a94e8f0ecb8f5c39364d436e6d5"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --ignore-db-dir=lost+found
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trillian-1679797881-mysql
+                  key: mysql-root-password
+            - name: MYSQL_USER
+              value: "mysql"
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trillian-1679797881-mysql
+                  key: mysql-password
+            - name: MYSQL_DATABASE
+              value: trillian-1679797881
+          ports:            
+            - containerPort: 3306
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+              - /etc/init.d/mysql
+              - status
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            exec:
+              command:
+              - /etc/init.d/mysql
+              - status
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            {}
+          volumeMounts:
+            - name: storage
+              mountPath: /var/lib/mysql
+              subPath: 
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: trillian-1679797881-mysql
+---
+# Source: trillian/templates/trillian-log-server/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: "log-server"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-log-server
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "log-server"
+      app.kubernetes.io/name: trillian
+      app.kubernetes.io/instance: trillian-1679797881
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: "log-server"
+        app.kubernetes.io/name: trillian
+        app.kubernetes.io/instance: trillian-1679797881
+        helm.sh/chart: trillian-0.2.3
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: trillian-1679797881-log-server
+      initContainers:
+        - name: "wait-for-trillian-db"
+          image: "docker.io/toolbelt/netcat@sha256:7d921b6d368fb1736cb0832c6f57e426c161593c075847af3378eb3185801cea"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z -w 10 trillian-1679797881-mysql 3306; do echo waiting for trillian-1679797881-mysql; sleep 5; done;"]
+      containers:
+        - name: trillian-log-server
+          image: "gcr.io/projectsigstore/trillian_log_server@sha256:75dbbfc4c0b64334b985c4971fe58c30b9dd73d7aa54b15cee61223ff92aebf3"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "--storage_system=mysql"
+            - "--quota_system=mysql"
+            - "--mysql_uri=$(MYSQL_USER):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOSTNAME):$(MYSQL_PORT))/$(MYSQL_DATABASE)"
+            - "--rpc_endpoint=0.0.0.0:8091"
+            - "--http_endpoint=0.0.0.0:8090"
+            - "--alsologtostderr"
+          env:            
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-1679797881-mysql
+                    key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-1679797881-mysql
+                    key: mysql-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-1679797881-mysql
+                    key: mysql-database
+            - name: MYSQL_HOSTNAME
+              value: trillian-1679797881-mysql
+            - name: MYSQL_PORT
+              value: "3306"
+          ports:            
+            - containerPort: 8091
+              protocol: TCP
+            - containerPort: 8090
+              protocol: TCP
+          resources:
+            {}
+      nodeSelector:
+        kubernetes.io/arch: amd64
+---
+# Source: trillian/templates/trillian-log-signer/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: "log-signer"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-1679797881-log-signer
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "log-signer"
+      app.kubernetes.io/name: trillian
+      app.kubernetes.io/instance: trillian-1679797881
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: "log-signer"
+        app.kubernetes.io/name: trillian
+        app.kubernetes.io/instance: trillian-1679797881
+        helm.sh/chart: trillian-0.2.3
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: trillian-1679797881-log-signer
+      initContainers:
+        - name: "wait-for-trillian-db"
+          image: "docker.io/toolbelt/netcat@sha256:7d921b6d368fb1736cb0832c6f57e426c161593c075847af3378eb3185801cea"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z -w 10 trillian-1679797881-mysql 3306; do echo waiting for trillian-1679797881-mysql; sleep 5; done;"]
+      containers:
+        - name: trillian-log-signer
+          image: "gcr.io/projectsigstore/trillian_log_signer@sha256:b56ed0b7b5e9813c91b208ba6041c9342f9a53162d96943374e59b5289090f1f"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "--storage_system=mysql"
+            - "--quota_system=mysql"
+            - "--mysql_uri=$(MYSQL_USER):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOSTNAME):$(MYSQL_PORT))/$(MYSQL_DATABASE)"
+            - "--rpc_endpoint=0.0.0.0:8091"
+            - "--http_endpoint=0.0.0.0:8090"
+            - "--force_master=true"
+            - "--alsologtostderr"
+          env:            
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-1679797881-mysql
+                    key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-1679797881-mysql
+                    key: mysql-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-1679797881-mysql
+                    key: mysql-database
+            - name: MYSQL_HOSTNAME
+              value: trillian-1679797881-mysql
+            - name: MYSQL_PORT
+              value: "3306"
+          ports:            
+            - containerPort: 8091
+              protocol: TCP
+          resources:
+            {}
+      nodeSelector:
+        kubernetes.io/arch: amd64
+---
+# Source: trillian/templates/createdb/createdb-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: trillian-1679797881-createdb
+  namespace: default
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: trillian-1679797881
+    helm.sh/chart: trillian-0.2.3
+    app.kubernetes.io/managed-by: Helm
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      serviceAccountName: trillian-1679797881-log-server
+      restartPolicy: Never
+      automountServiceAccountToken: 
+      containers:
+        - name: trillian-1679797881-createdb
+          image: "ghcr.io/sigstore/scaffolding/createdb@sha256:9aa98492115c465b0cecfd6dbb04411a40c0d2d7e5d7c510f5646bd1d825e3c7"
+          imagePullPolicy: "IfNotPresent"
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: trillian-1679797881-mysql
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trillian-1679797881-mysql
+                  key: mysql-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: trillian-1679797881-mysql
+                  key: mysql-database
+            - name: MYSQL_HOSTNAME
+              value: trillian-1679797881-mysql
+            - name: MYSQL_PORT
+              value: "3306"
+            - name: EXIT_DIR
+              value: "/var/exitdir"
+          args: [
+            "--db_name=$(MYSQL_DATABASE)",
+            "--mysql_uri=$(MYSQL_USER):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOSTNAME):$(MYSQL_PORT))/"
+          ]
+          volumeMounts:
+            - name: exit-dir
+              mountPath: "/var/exitdir"
+      volumes:
+        - name: exit-dir
+          emptyDir: {}

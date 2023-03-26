@@ -1,0 +1,1242 @@
+NAME: rekor-1679797850
+LAST DEPLOYED: Sun Mar 26 02:30:50 2023
+NAMESPACE: default
+STATUS: pending-install
+REVISION: 1
+TEST SUITE: None
+USER-SUPPLIED VALUES:
+{}
+
+COMPUTED VALUES:
+backfillredis:
+  enabled: false
+  endIndex: -1
+  image:
+    pullPolicy: IfNotPresent
+    registry: ghcr.io
+    repository: sigstore/rekor/backfill-redis
+    version: sha256:15f070c4b853f38773d253ebd39957de5c3beffc1699ba574db98e3679336af1
+  name: backfillredis
+  rekorAddress: rekor.rekor-system.svc
+  resources: {}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65533
+  startIndex: -1
+  ttlSecondsAfterFinished: 3600
+createtree:
+  annotations: {}
+  force: false
+  image:
+    pullPolicy: IfNotPresent
+    registry: ghcr.io
+    repository: sigstore/scaffolding/createtree
+    version: sha256:03e7b3b068e61f65a730b7a95f498c76a02ddecb4f7a65e09b2753b66ac8399f
+  name: createtree
+  resources: {}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65533
+  serviceAccount:
+    annotations: {}
+    create: true
+    name: ""
+  ttlSecondsAfterFinished: 3600
+forceNamespace: ""
+imagePullSecrets: []
+initContainerImage:
+  curl:
+    imagePullPolicy: IfNotPresent
+    registry: docker.io
+    repository: curlimages/curl
+    version: sha256:dca6e1b1c8e7b8b8e7be4e79fc78a858d12fd56245cb31bfa281dbf7c73a6498
+namespace:
+  create: false
+  name: rekor-system
+redis:
+  args:
+  - --bind
+  - 0.0.0.0
+  - --appendonly
+  - "yes"
+  enabled: true
+  hostname: ""
+  image:
+    pullPolicy: IfNotPresent
+    registry: docker.io
+    repository: redis
+    version: sha256:6c42cce2871e8dc5fb3e843ed5c4e7939d312faf5e53ff0ff4ca955a7e0b2b39
+  name: redis
+  port: 6379
+  readinessProbe:
+    exec:
+      command:
+      - /bin/sh
+      - -i
+      - -c
+      - test "$(redis-cli -h 127.0.0.1 ping)" = "PONG"
+    failureThreshold: 3
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  replicaCount: 1
+  resources: {}
+  service:
+    ports:
+    - name: 6379-tcp
+      port: 6379
+      protocol: TCP
+      targetPort: 6379
+    type: ClusterIP
+  serviceAccount:
+    annotations: {}
+    create: true
+    name: ""
+server:
+  attestation_storage:
+    bucket: file:///var/run/attestations
+    enabled: true
+    persistence:
+      accessModes:
+      - ReadWriteOnce
+      annotations: {}
+      enabled: true
+      existingClaim: ""
+      mountPath: /var/lib/mysql
+      reclaimPolicy: Delete
+      size: 5Gi
+      storageClass: ""
+      subPath: ""
+  config:
+    key: treeID
+    treeID: ""
+  enabled: true
+  extraArgs: []
+  image:
+    pullPolicy: IfNotPresent
+    registry: gcr.io
+    repository: projectsigstore/rekor-server
+    version: sha256:f7e6975041b9b6f3afdc7d6a1a87de43098ce8d83eb1958ea097ebfcb5537658
+  ingress:
+    annotations: {}
+    className: nginx
+    enabled: true
+    hosts:
+    - host: root
+      path: /
+    tls: []
+  livenessProbe:
+    failureThreshold: 3
+    httpGet:
+      path: /ping
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  logging:
+    production: false
+  name: server
+  podAnnotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "2112"
+    prometheus.io/scrape: "true"
+  port: 3000
+  readinessProbe:
+    failureThreshold: 3
+    httpGet:
+      path: /ping
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  replicaCount: 1
+  resources: {}
+  retrieve_api:
+    enabled: true
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65533
+  service:
+    ports:
+    - name: 3000-tcp
+      port: 80
+      protocol: TCP
+      targetPort: 3000
+    - name: 2112-tcp
+      port: 2112
+      protocol: TCP
+      targetPort: 2112
+    type: ClusterIP
+  serviceAccount:
+    annotations: {}
+    create: true
+    name: ""
+  sharding:
+    contents: ""
+    filename: sharding-config.yaml
+    mountPath: /sharding
+  signer: memory
+trillian:
+  adminServer: ""
+  createdb:
+    dbname: trillian
+    enabled: true
+    image:
+      pullPolicy: IfNotPresent
+      registry: ghcr.io
+      repository: sigstore/scaffolding/createdb
+      version: sha256:5ec1b95581d238dfbbd8e412422500cc242123078de8aaad23e5f9c65eaf2ba5
+    name: createdb
+    serviceAccount:
+      annotations: {}
+      create: false
+      name: ""
+    ttlSecondsAfterFinished: 3600
+  enabled: true
+  forceNamespace: trillian-system
+  fullnameOverride: trillian
+  global: {}
+  initContainerImage:
+    curl:
+      imagePullPolicy: IfNotPresent
+      registry: docker.io
+      repository: curlimages/curl
+      version: sha256:9fab1b73f45e06df9506d947616062d7e8319009257d3a05d970b0de80a41ec5
+    netcat:
+      imagePullPolicy: IfNotPresent
+      registry: docker.io
+      repository: toolbelt/netcat
+      version: sha256:7d921b6d368fb1736cb0832c6f57e426c161593c075847af3378eb3185801cea
+  logServer:
+    enabled: true
+    extraArgs: []
+    fullnameOverride: trillian-logserver
+    image:
+      pullPolicy: IfNotPresent
+      registry: gcr.io
+      repository: projectsigstore/trillian_log_server
+      version: sha256:75dbbfc4c0b64334b985c4971fe58c30b9dd73d7aa54b15cee61223ff92aebf3
+    livenessProbe: {}
+    name: trillian-logserver
+    nodeSelector:
+      kubernetes.io/arch: amd64
+    portHTTP: 8090
+    portRPC: 8091
+    readinessProbe: {}
+    replicaCount: 1
+    resources: {}
+    service:
+      ports:
+      - name: 8091-tcp
+        port: 8091
+        protocol: TCP
+        targetPort: 8091
+      - name: 8090-tcp
+        port: 8090
+        protocol: TCP
+        targetPort: 8090
+      type: ClusterIP
+    serviceAccount:
+      annotations: {}
+      create: true
+      name: ""
+  logSigner:
+    enabled: true
+    extraArgs: []
+    forceMaster: true
+    fullnameOverride: trillian-logsigner
+    image:
+      pullPolicy: IfNotPresent
+      registry: gcr.io
+      repository: projectsigstore/trillian_log_signer
+      version: sha256:b56ed0b7b5e9813c91b208ba6041c9342f9a53162d96943374e59b5289090f1f
+    livenessProbe: {}
+    name: trillian-logsigner
+    nodeSelector:
+      kubernetes.io/arch: amd64
+    portHTTP: 8090
+    portRPC: 8091
+    readinessProbe: {}
+    replicaCount: 1
+    resources: {}
+    service:
+      ports:
+      - name: 8091-tcp
+        port: 8091
+        protocol: TCP
+        targetPort: 8091
+      type: ClusterIP
+    serviceAccount:
+      annotations: {}
+      create: true
+      name: ""
+  mysql:
+    args:
+    - --ignore-db-dir=lost+found
+    auth:
+      existingSecret: ""
+      password: ""
+      rootPassword: ""
+      username: mysql
+    enabled: true
+    fullnameOverride: trillian-mysql
+    gcp:
+      cloudsql:
+        registry: gcr.io
+        repository: cloudsql-docker/gce-proxy
+        resources:
+          requests:
+            cpu: "1"
+            memory: 2Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+        version: sha256:7f53fe219f6815e275301561e2f8819e59e38eca5a93de644a287452f841fab7
+      enabled: false
+      instance: ""
+    hostname: ""
+    image:
+      pullPolicy: IfNotPresent
+      registry: gcr.io
+      repository: trillian-opensource-ci/db_server
+      version: sha256:22b7fddcb4bafc5692760d84dca5e86294363a94e8f0ecb8f5c39364d436e6d5
+    livenessProbe:
+      exec:
+        command:
+        - /etc/init.d/mysql
+        - status
+      failureThreshold: 3
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 1
+    name: mysql
+    persistence:
+      accessModes:
+      - ReadWriteOnce
+      annotations: {}
+      enabled: true
+      existingClaim: ""
+      mountPath: /var/lib/mysql
+      size: 5Gi
+      subPath: ""
+    port: 3306
+    readinessProbe:
+      exec:
+        command:
+        - /etc/init.d/mysql
+        - status
+      failureThreshold: 3
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 1
+    replicaCount: 1
+    resources: {}
+    secret:
+      annotations: {}
+    service:
+      ports:
+      - name: 3306-tcp
+        port: 3306
+        protocol: TCP
+        targetPort: 3306
+      type: ClusterIP
+    serviceAccount:
+      annotations: {}
+      create: true
+      name: ""
+    strategy:
+      type: Recreate
+  namespace:
+    create: true
+    name: trillian-system
+  quotaSystem:
+    driver: mysql
+  storageSystem:
+    driver: mysql
+
+HOOKS:
+MANIFEST:
+---
+# Source: rekor/charts/trillian/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trillian-system
+---
+# Source: rekor/charts/trillian/templates/mysql/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-mysql
+  namespace: trillian-system
+  annotations:
+    {}
+---
+# Source: rekor/charts/trillian/templates/trillian-log-server/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-logserver
+  namespace: trillian-system
+  annotations:
+    {}
+---
+# Source: rekor/charts/trillian/templates/trillian-log-signer/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: "trillian-logsigner"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-logsigner
+  namespace: trillian-system
+  annotations:
+    {}
+---
+# Source: rekor/templates/redis/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: "redis"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  name: rekor-1679797850-redis
+  namespace: default
+  annotations:
+    {}
+---
+# Source: rekor/templates/server/createtree-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rekor-1679797850-createtree
+  namespace: default
+  labels:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    {}
+---
+# Source: rekor/templates/server/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  name: rekor-1679797850-server
+  namespace: default
+  annotations:
+    {}
+---
+# Source: rekor/charts/trillian/templates/mysql/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-mysql
+  namespace: trillian-system
+type: Opaque
+data:
+  mysql-root-password: "VzZPUG05c1RmdQ=="
+  mysql-password: "WGpJUFZrV1hzRg=="
+  mysql-user: "bXlzcWw="
+  mysql-database:  "dHJpbGxpYW4="
+---
+# Source: rekor/templates/server/configmap-sharding.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rekor-1679797850-sharding-config
+  namespace: default
+  labels:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+data:
+  sharding-config.yaml: |
+---
+# Source: rekor/templates/server/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rekor-1679797850-config
+  namespace: default
+  labels:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+data:
+  __placeholder: |
+    ###################################################################
+    # Just a placeholder so that reapplying this won't overwrite treeID
+    # if it already exists. This caused grief, do not remove.
+    ###################################################################
+---
+# Source: rekor/charts/trillian/templates/mysql/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-mysql
+  namespace: trillian-system
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "5Gi"
+---
+# Source: rekor/templates/server/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  labels:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  name: rekor-1679797850-server
+  namespace: default
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "5Gi"
+---
+# Source: rekor/templates/server/cm-operator-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rekor-1679797850-cm-operator
+  namespace: default
+  labels:
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    app.kubernetes.io/version: "1.0.2"
+    app.kubernetes.io/managed-by: Helm
+rules:
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["configmaps"]
+    resourceNames: ["rekor-1679797850-config"]
+    verbs: ["get", "update"]
+---
+# Source: rekor/templates/server/cm-operator-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rekor-1679797850-cm-operator
+  namespace: default
+  labels:
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    app.kubernetes.io/version: "1.0.2"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rekor-1679797850-cm-operator
+subjects:
+  - kind: ServiceAccount
+    name: rekor-1679797850-createtree
+    namespace: default
+---
+# Source: rekor/charts/trillian/templates/mysql/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-mysql
+  namespace: trillian-system
+spec:
+  ports:
+    - name: 3306-tcp
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+  type: "ClusterIP"
+---
+# Source: rekor/charts/trillian/templates/trillian-log-server/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: "trillian-logserver"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-logserver
+  namespace: trillian-system
+spec:
+  ports:
+    - name: 8091-tcp
+      port: 8091
+      protocol: TCP
+      targetPort: 8091
+    - name: 8090-tcp
+      port: 8090
+      protocol: TCP
+      targetPort: 8090
+  selector:
+    app.kubernetes.io/component: "trillian-logserver"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+  type: "ClusterIP"
+---
+# Source: rekor/charts/trillian/templates/trillian-log-signer/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: "trillian-logsigner"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-logsigner
+  namespace: trillian-system
+spec:
+  ports:
+    - name: 8091-tcp
+      port: 8091
+      protocol: TCP
+      targetPort: 8091
+  selector:
+    app.kubernetes.io/component: "trillian-logsigner"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+  type: "ClusterIP"
+---
+# Source: rekor/templates/redis/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: "redis"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  name: rekor-1679797850-redis
+  namespace: default
+spec:
+  ports:
+    - name: 6379-tcp
+      port: 6379
+      protocol: TCP
+      targetPort: 6379
+  selector:
+    app.kubernetes.io/component: "redis"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+  type: "ClusterIP"
+---
+# Source: rekor/templates/server/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  name: rekor-1679797850-server
+  namespace: default
+spec:
+  ports:
+    - name: 3000-tcp
+      port: 80
+      protocol: TCP
+      targetPort: 3000
+    - name: 2112-tcp
+      port: 2112
+      protocol: TCP
+      targetPort: 2112
+  selector:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+  type: "ClusterIP"
+---
+# Source: rekor/charts/trillian/templates/mysql/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-mysql
+  namespace: trillian-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "mysql"
+      app.kubernetes.io/name: trillian
+      app.kubernetes.io/instance: rekor-1679797850
+  replicas: 1
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: "mysql"
+        app.kubernetes.io/name: trillian
+        app.kubernetes.io/instance: rekor-1679797850
+        helm.sh/chart: trillian-0.1.17
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: trillian-mysql
+      containers:
+        - name: trillian-mysql
+          image: "gcr.io/trillian-opensource-ci/db_server@sha256:22b7fddcb4bafc5692760d84dca5e86294363a94e8f0ecb8f5c39364d436e6d5"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --ignore-db-dir=lost+found
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trillian-mysql
+                  key: mysql-root-password
+            - name: MYSQL_USER
+              value: "mysql"
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trillian-mysql
+                  key: mysql-password
+            - name: MYSQL_DATABASE
+              value: trillian
+          ports:            
+            - containerPort: 3306
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+              - /etc/init.d/mysql
+              - status
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            exec:
+              command:
+              - /etc/init.d/mysql
+              - status
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            {}
+          volumeMounts:
+            - name: storage
+              mountPath: /var/lib/mysql
+              subPath: 
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: trillian-mysql
+---
+# Source: rekor/charts/trillian/templates/trillian-log-server/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: "trillian-logserver"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-logserver
+  namespace: trillian-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "trillian-logserver"
+      app.kubernetes.io/name: trillian
+      app.kubernetes.io/instance: rekor-1679797850
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: "trillian-logserver"
+        app.kubernetes.io/name: trillian
+        app.kubernetes.io/instance: rekor-1679797850
+        helm.sh/chart: trillian-0.1.17
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: trillian-logserver
+      initContainers:
+        - name: "wait-for-trillian-db"
+          image: "docker.io/toolbelt/netcat@sha256:7d921b6d368fb1736cb0832c6f57e426c161593c075847af3378eb3185801cea"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z -w 10 trillian-mysql 3306; do echo waiting for trillian-mysql; sleep 5; done;"]
+      containers:
+        - name: trillian-trillian-logserver
+          image: "gcr.io/projectsigstore/trillian_log_server@sha256:75dbbfc4c0b64334b985c4971fe58c30b9dd73d7aa54b15cee61223ff92aebf3"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "--storage_system=mysql"
+            - "--quota_system=mysql"
+            - "--mysql_uri=$(MYSQL_USER):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOSTNAME):$(MYSQL_PORT))/$(MYSQL_DATABASE)"
+            - "--rpc_endpoint=0.0.0.0:8091"
+            - "--http_endpoint=0.0.0.0:8090"
+            - "--alsologtostderr"
+          env:            
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-mysql
+                    key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-mysql
+                    key: mysql-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-mysql
+                    key: mysql-database
+            - name: MYSQL_HOSTNAME
+              value: trillian-mysql
+            - name: MYSQL_PORT
+              value: "3306"
+          ports:            
+            - containerPort: 8091
+              protocol: TCP
+            - containerPort: 8090
+              protocol: TCP
+          resources:
+            {}
+      nodeSelector:
+        kubernetes.io/arch: amd64
+---
+# Source: rekor/charts/trillian/templates/trillian-log-signer/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: "trillian-logsigner"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+  name: trillian-logsigner
+  namespace: trillian-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "trillian-logsigner"
+      app.kubernetes.io/name: trillian
+      app.kubernetes.io/instance: rekor-1679797850
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: "trillian-logsigner"
+        app.kubernetes.io/name: trillian
+        app.kubernetes.io/instance: rekor-1679797850
+        helm.sh/chart: trillian-0.1.17
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: trillian-logsigner
+      initContainers:
+        - name: "wait-for-trillian-db"
+          image: "docker.io/toolbelt/netcat@sha256:7d921b6d368fb1736cb0832c6f57e426c161593c075847af3378eb3185801cea"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until nc -z -w 10 trillian-mysql 3306; do echo waiting for trillian-mysql; sleep 5; done;"]
+      containers:
+        - name: trillian-trillian-logsigner
+          image: "gcr.io/projectsigstore/trillian_log_signer@sha256:b56ed0b7b5e9813c91b208ba6041c9342f9a53162d96943374e59b5289090f1f"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "--storage_system=mysql"
+            - "--quota_system=mysql"
+            - "--mysql_uri=$(MYSQL_USER):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOSTNAME):$(MYSQL_PORT))/$(MYSQL_DATABASE)"
+            - "--rpc_endpoint=0.0.0.0:8091"
+            - "--http_endpoint=0.0.0.0:8090"
+            - "--force_master=true"
+            - "--alsologtostderr"
+          env:            
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-mysql
+                    key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-mysql
+                    key: mysql-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                    name: trillian-mysql
+                    key: mysql-database
+            - name: MYSQL_HOSTNAME
+              value: trillian-mysql
+            - name: MYSQL_PORT
+              value: "3306"
+          ports:            
+            - containerPort: 8091
+              protocol: TCP
+          resources:
+            {}
+      nodeSelector:
+        kubernetes.io/arch: amd64
+---
+# Source: rekor/templates/redis/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: "redis"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  name: rekor-1679797850-redis
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "redis"
+      app.kubernetes.io/name: rekor
+      app.kubernetes.io/instance: rekor-1679797850
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: "redis"
+        app.kubernetes.io/name: rekor
+        app.kubernetes.io/instance: rekor-1679797850
+        helm.sh/chart: rekor-1.2.0
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: rekor-1679797850-redis
+      containers:
+        - name: rekor-redis
+          image: "docker.io/redis@sha256:6c42cce2871e8dc5fb3e843ed5c4e7939d312faf5e53ff0ff4ca955a7e0b2b39"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --bind
+            - 0.0.0.0
+            - --appendonly
+            - "yes"
+          ports:            
+            - containerPort: 6379
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -i
+              - -c
+              - test "$(redis-cli -h 127.0.0.1 ping)" = "PONG"
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            {}
+          volumeMounts:
+            - name: storage
+              mountPath: /data
+      volumes:
+        - name: storage
+          emptyDir: {}
+---
+# Source: rekor/templates/server/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  name: rekor-1679797850-server
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "server"
+      app.kubernetes.io/name: rekor
+      app.kubernetes.io/instance: rekor-1679797850
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        checksum/config: 5b30229b0f3fc0796a0442d297c4b3f3f1716bd66299efa1db131b7dfdeac2c2
+        checksum/sharding_config: ec5115aeb27e43609bc86ebfa8fedf9b010f82748ee8e6242f1897ab05d21b4c
+        prometheus.io/path: /metrics
+        prometheus.io/port: "2112"
+        prometheus.io/scrape: "true"
+      labels:
+        app.kubernetes.io/component: "server"
+        app.kubernetes.io/name: rekor
+        app.kubernetes.io/instance: rekor-1679797850
+        helm.sh/chart: rekor-1.2.0
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: rekor-1679797850-server
+      initContainers:
+        - name: "wait-for-trillian-log-server"
+          image: "docker.io/curlimages/curl@sha256:dca6e1b1c8e7b8b8e7be4e79fc78a858d12fd56245cb31bfa281dbf7c73a6498"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until curl --max-time 10 http://trillian-logserver.trillian-system:8090; do echo waiting for trillian-logserver; sleep 5; done;"]
+      containers:
+        - name: rekor-server
+          image: "gcr.io/projectsigstore/rekor-server@sha256:f7e6975041b9b6f3afdc7d6a1a87de43098ce8d83eb1958ea097ebfcb5537658"
+          imagePullPolicy: "IfNotPresent"
+          env:
+            - name: TREE_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: rekor-1679797850-config
+                  key: treeID
+          args:
+            - "serve"
+            - "--trillian_log_server.address=trillian-logserver.trillian-system"
+            - "--trillian_log_server.port=8091"
+            - "--trillian_log_server.sharding_config=/sharding/sharding-config.yaml"
+            - "--redis_server.address=rekor-1679797850-redis"
+            - "--redis_server.port=6379"
+            - "--rekor_server.address=0.0.0.0"
+            - "--rekor_server.signer=memory"
+            - "--enable_retrieve_api=true"
+            - "--trillian_log_server.tlog_id=$(TREE_ID)"
+            - "--enable_attestation_storage"
+            - "--attestation_storage_bucket=file:///var/run/attestations"
+          ports:            
+            - containerPort: 3000
+              protocol: TCP
+            - containerPort: 2112
+              protocol: TCP
+          volumeMounts:
+            - name: rekor-1679797850-sharding-config
+              mountPath: /sharding
+            - name: storage
+              mountPath: /var/run/attestations
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ping
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ping
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            {}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65533
+      volumes:
+        - name: rekor-1679797850-sharding-config
+          configMap:
+            name: rekor-1679797850-sharding-config
+        - name: storage
+          persistentVolumeClaim:
+            claimName: rekor-1679797850-server
+---
+# Source: rekor/charts/trillian/templates/createdb/createdb-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rekor-1679797850-trillian-createdb
+  namespace: trillian-system
+  labels:
+    app.kubernetes.io/component: "mysql"
+    app.kubernetes.io/name: trillian
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: trillian-0.1.17
+    app.kubernetes.io/managed-by: Helm
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      serviceAccountName: trillian-logserver
+      restartPolicy: Never
+      automountServiceAccountToken: 
+      containers:
+        - name: rekor-1679797850-trillian-createdb
+          image: "ghcr.io/sigstore/scaffolding/createdb@sha256:5ec1b95581d238dfbbd8e412422500cc242123078de8aaad23e5f9c65eaf2ba5"
+          imagePullPolicy: "IfNotPresent"
+          env:
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: MYSQL_USER
+            valueFrom:
+              secretKeyRef:
+                name: trillian-mysql
+                key: mysql-user
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: trillian-mysql
+                key: mysql-password
+          - name: MYSQL_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: trillian-mysql
+                key: mysql-database
+          - name: MYSQL_HOSTNAME
+            value: trillian-mysql
+          - name: MYSQL_PORT
+            value: "3306"
+          args: [
+            "--db_name=$(MYSQL_DATABASE)",
+            "--mysql_uri=$(MYSQL_USER):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOSTNAME):$(MYSQL_PORT))/"
+          ]
+---
+# Source: rekor/templates/server/createtree-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  name: rekor-1679797850-createtree
+  namespace: default
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      serviceAccountName: rekor-1679797850-createtree
+      restartPolicy: Never
+      automountServiceAccountToken: true
+      containers:
+        - name: rekor-1679797850-createtree
+          image: "ghcr.io/sigstore/scaffolding/createtree@sha256:03e7b3b068e61f65a730b7a95f498c76a02ddecb4f7a65e09b2753b66ac8399f"
+          args: ["--namespace=$(NAMESPACE)",
+            "--configmap=rekor-1679797850-config",
+            "--display_name=rekortree",
+            "--admin_server=trillian-logserver.trillian-system:8091",
+            "--force=false"
+          ]
+          env:
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          resources:
+            {}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65533
+---
+# Source: rekor/templates/server/ingress.yaml
+apiVersion: "networking.k8s.io/v1"
+kind: Ingress
+metadata:
+  labels:
+    app.kubernetes.io/component: "server"
+    app.kubernetes.io/name: rekor
+    app.kubernetes.io/instance: rekor-1679797850
+    helm.sh/chart: rekor-1.2.0
+    app.kubernetes.io/managed-by: Helm
+  name: rekor-1679797850-server
+  namespace: default
+  annotations:
+    {}
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "root"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rekor-1679797850-server
+                port:
+                  number: 80

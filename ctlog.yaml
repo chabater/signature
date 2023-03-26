@@ -1,0 +1,432 @@
+NAME: ctlog-1679797525
+LAST DEPLOYED: Sun Mar 26 02:25:25 2023
+NAMESPACE: default
+STATUS: pending-install
+REVISION: 1
+TEST SUITE: None
+USER-SUPPLIED VALUES:
+{}
+
+COMPUTED VALUES:
+createctconfig:
+  annotations: {}
+  backoffLimit: 6
+  enabled: true
+  fulcioURL: http://fulcio-server.fulcio-system.svc
+  image:
+    pullPolicy: IfNotPresent
+    registry: ghcr.io
+    repository: sigstore/scaffolding/createctconfig
+    version: sha256:b3dae896ddb7b01b3257c668bc1e87f15aafe97f30a767f99426f557fa33e44c
+  initContainerImage:
+    curl:
+      imagePullPolicy: IfNotPresent
+      registry: docker.io
+      repository: curlimages/curl
+      version: sha256:dca6e1b1c8e7b8b8e7be4e79fc78a858d12fd56245cb31bfa281dbf7c73a6498
+  logPrefix: sigstorescaffolding
+  name: createctconfig
+  privateKeyPasswordSecretName: ""
+  privateSecret: ""
+  pubkeysecret: ctlog-public-key
+  replicaCount: 1
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65533
+  serviceAccount:
+    annotations: {}
+    create: true
+    mountToken: true
+    name: ""
+  ttlSecondsAfterFinished: 3600
+createtree:
+  annotations: {}
+  displayName: ctlog-tree
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+    registry: ghcr.io
+    repository: sigstore/scaffolding/createtree
+    version: sha256:d5776d8a43632291e1c5a22a9266608db0daa0a11663445d701e327f2205974c
+  name: createtree
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65533
+  serviceAccount:
+    annotations: {}
+    create: true
+    mountToken: true
+    name: ""
+  ttlSecondsAfterFinished: 3600
+forceNamespace: ""
+namespace:
+  create: false
+  name: ctlog-system
+server:
+  config:
+    key: treeID
+    treeID: ""
+  extraArgs: []
+  image:
+    pullPolicy: IfNotPresent
+    registry: ghcr.io
+    repository: sigstore/scaffolding/ct_server
+    version: sha256:7c791d3b7c15e817807f07d4cdb00406529a114702ad448ee857e1d0fc5fb5a9
+  ingress:
+    annotations: {}
+    className: nginx
+    enabled: false
+    hosts:
+    - path: /
+    tls: []
+  podAnnotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "6963"
+    prometheus.io/scrape: "true"
+  portHTTP: 6962
+  portHTTPMetrics: 6963
+  replicaCount: 1
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65533
+  service:
+    ports:
+    - name: 6962-tcp
+      port: 80
+      protocol: TCP
+      targetPort: 6962
+    - name: 6963-tcp
+      port: 6963
+      protocol: TCP
+      targetPort: 6963
+    type: ClusterIP
+  serviceAccount:
+    annotations: {}
+    create: true
+    mountToken: false
+    name: ""
+trillian:
+  logServer:
+    name: trillian-logserver
+    portRPC: 8091
+  namespace: trillian-system
+
+HOOKS:
+MANIFEST:
+---
+# Source: ctlog/templates/createctconfig-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ctlog-1679797525-createctconfig
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    {}
+---
+# Source: ctlog/templates/createtree-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ctlog-1679797525-createtree
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    {}
+---
+# Source: ctlog/templates/ctlog-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ctlog-1679797525
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    {}
+---
+# Source: ctlog/templates/ctlog-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ctlog-1679797525-config
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  __placeholder: |
+    ###################################################################
+    # Just a placeholder so that reapplying this won't overwrite treeID
+    # if it already exists. This caused grief, do not remove.
+    ###################################################################
+---
+# Source: ctlog/templates/cm-operator-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ctlog-1679797525-cm-operator
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+rules:
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["configmaps"]
+    resourceNames: ["ctlog-1679797525-config"]
+    verbs: ["get", "update"]
+---
+# Source: ctlog/templates/secret-operator-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ctlog-1679797525-secret-operator
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+rules:
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["configmaps"]
+    resourceNames: ["ctlog-1679797525-config"]
+    verbs: ["get", "update"]
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["secrets"]
+    verbs: ["create", "get", "update"]
+---
+# Source: ctlog/templates/cm-operator-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ctlog-1679797525-cm-operator
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ctlog-1679797525-cm-operator
+subjects:
+  - kind: ServiceAccount
+    name: ctlog-1679797525-createtree
+    namespace: default
+---
+# Source: ctlog/templates/secret-operator-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ctlog-1679797525-secret-operator
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ctlog-1679797525-secret-operator
+subjects:
+  - kind: ServiceAccount
+    name: ctlog-1679797525-createctconfig
+    namespace: default
+---
+# Source: ctlog/templates/ctlog-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+  name: ctlog-1679797525
+  namespace: default
+spec:
+  ports:
+    - name: 6962-tcp
+      port: 80
+      protocol: TCP
+      targetPort: 6962
+    - name: 6963-tcp
+      port: 6963
+      protocol: TCP
+      targetPort: 6963
+  selector:
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+  type: "ClusterIP"
+---
+# Source: ctlog/templates/ctlog-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ctlog-1679797525
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ctlog
+      app.kubernetes.io/instance: ctlog-1679797525
+  template:
+    metadata:
+      annotations:
+        checksum/config: a2551583ded0ba301582e337875b6f22d14f2a9ae94d8c7233adc0edd2521e09
+        prometheus.io/path: /metrics
+        prometheus.io/port: "6963"
+        prometheus.io/scrape: "true"
+      labels:
+        app.kubernetes.io/name: ctlog
+        app.kubernetes.io/instance: ctlog-1679797525
+    spec:
+      serviceAccountName: ctlog-1679797525
+      containers:
+        - name: ctlog-1679797525
+          image: "ghcr.io/sigstore/scaffolding/ct_server@sha256:7c791d3b7c15e817807f07d4cdb00406529a114702ad448ee857e1d0fc5fb5a9"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "--http_endpoint=0.0.0.0:6962"
+            - "--metrics_endpoint=0.0.0.0:6963"
+            - "--log_config=/ctfe-keys/config"
+            - "--alsologtostderr"
+          volumeMounts:
+            - name: keys
+              mountPath: "/ctfe-keys"
+              readOnly: true
+          ports:            
+            - containerPort: 6962
+              protocol: TCP
+            - containerPort: 6963
+              protocol: TCP
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65533
+      volumes:
+        - name: keys
+          secret:
+            secretName: ctlog-1679797525-secret
+---
+# Source: ctlog/templates/createctconfig-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ctlog-1679797525-createctconfig
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 6
+  template:
+    spec:
+      serviceAccountName: ctlog-1679797525-createctconfig
+      restartPolicy: Never
+      automountServiceAccountToken: true
+      initContainers:
+        - name: "wait-for-createtree-configmap"
+          image: "docker.io/curlimages/curl@sha256:dca6e1b1c8e7b8b8e7be4e79fc78a858d12fd56245cb31bfa281dbf7c73a6498"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until curl --fail --header \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --max-time 10 https://kubernetes.default.svc/api/v1/namespaces/$(NAMESPACE)/configmaps/ctlog-1679797525-config | grep '\"treeID\":'; do echo waiting for Configmap ctlog-1679797525-config; sleep 5; done;"]
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      containers:
+        - name: ctlog-1679797525-createctconfig
+          image: "ghcr.io/sigstore/scaffolding/createctconfig@sha256:b3dae896ddb7b01b3257c668bc1e87f15aafe97f30a767f99426f557fa33e44c"
+          imagePullPolicy: "IfNotPresent"
+          args: [
+            "--configmap=ctlog-1679797525-config",
+            "--secret=ctlog-1679797525-secret",
+            "--pubkeysecret=ctlog-public-key",
+            "--fulcio-url=http://fulcio-server.fulcio-system.svc",
+            "--trillian-server=trillian-logserver.trillian-system:8091",
+            "--log-prefix=sigstorescaffolding"
+          ]
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65533
+---
+# Source: ctlog/templates/createtree-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ctlog-1679797525-createtree
+  namespace: default
+  labels:
+    helm.sh/chart: ctlog-0.2.40
+    app.kubernetes.io/name: ctlog
+    app.kubernetes.io/instance: ctlog-1679797525
+    app.kubernetes.io/version: "0.3.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      serviceAccountName: ctlog-1679797525-createtree
+      restartPolicy: Never
+      automountServiceAccountToken: true
+      containers:
+        - name: ctlog-1679797525-createtree
+          image: "ghcr.io/sigstore/scaffolding/createtree@sha256:d5776d8a43632291e1c5a22a9266608db0daa0a11663445d701e327f2205974c"
+          imagePullPolicy: "IfNotPresent"
+          env:
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          args: [
+            "--namespace=$(NAMESPACE)",
+            "--configmap=ctlog-1679797525-config",
+            "--display_name=ctlog-tree",
+            "--admin_server=trillian-logserver.trillian-system:8091"
+          ]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65533

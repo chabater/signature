@@ -1,0 +1,7 @@
+以下是您在使用 cosign 工具對映像檔進行數位簽署時所涉及到的服務，以及相關的工作：
+
+Fulcio：您可以使用 cosign 工具中的 key-pair 子命令來產生數位簽名所需的公私鑰，此公私鑰會使用 Fulcio 發行的 X.509 憑證進行簽名，確保數位簽署的可信度。
+ctlog：當您使用 cosign sign 命令簽署映像檔時，cosign 會將數位簽名資訊傳遞至 ctlog，使得數位簽名可以被公開紀錄並追蹤。
+Trillian：ctlog 會將數位簽名資訊透過 Merkle Tree 結構存儲於 Trillian 日誌中，使得任何人都可以驗證該數位簽名是否存在並且沒有被竄改。
+Rekor：cosign 會將數位簽名資訊加上詳細的映像檔 metadata，並將其傳遞至 Rekor 服務進行記錄，確保後續可以透過 Rekor 搜索並驗證該映像檔的數位簽名。
+TUF：當您在另一個地方驗證映像檔數位簽名時，您可以使用 TUF 框架來驗證該數位簽名是否正確，TUF 會在運作時查找 Trillian 日誌和 Rekor 服務以驗證數位簽名的完整性。
