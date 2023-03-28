@@ -1,0 +1,162 @@
+package main
+
+import (
+    "net/http"
+
+    tufServer "github.com/theupdateframework/go-tuf/server"
+)
+
+func main() {
+    server := tufServer.NewFileServer("tufrepo")
+    handler := http.HandlerFunc(server.ServeHTTP)
+    http.ListenAndServe(":8080", handler)
+}
+
+
+
+------------------------------------------------------------------------------
+
+
+package main
+
+import (
+    "fmt"
+    "net/http"
+
+    "github.com/theupdateframework/go-tuf"
+    "github.com/theupdateframework/go-tuf/server"
+)
+
+func main() {
+    // 初始化 tuf repository
+    repoDir := "/path/to/tuf/repo"
+    rootKeys, err := tuf.GenerateKeyPairs(tuf.RSA4096)
+    if err != nil {
+        panic(err)
+    }
+    err = tuf.InitRepo(repoDir, rootKeys)
+    if err != nil {
+        panic(err)
+    }
+
+    // 創建 tuf server
+    server := server.NewFileServer(repoDir)
+
+    // 設置 tuf server 的監聽地址
+    host := "0.0.0.0"
+    port := "8080"
+    addr := fmt.Sprintf("%s:%s", host, port)
+
+    // 啟動 tuf server
+    fmt.Printf("Starting TUF server on %s...\n", addr)
+    err = http.ListenAndServe(addr, server)
+    if err != nil {
+        panic(err)
+    }
+}
+
+
+------------------------------------------------------------------------------
+
+
+
+
+
+若您在offline的環境使用 container 執行 tuf server，您可以在 container 內使用以下步驟進行 tuf init：
+
+首先，在 container 內建立一個目錄，例如：/tuf_repo，用於存儲 tuf repository 相關的文件。
+
+在該目錄中，創建名為 metadata 和 targets 的目錄。此外，還需要創建名為 snapshot、timestamp 和 root.json 的文件。
+
+將您的 root 公鑰放在 metadata 目錄中。您可以使用以下命令生成 RSA4096 公私鑰對：
+
+openssl genrsa -out root.key 4096
+openssl rsa -in root.key -pubout -out root.pub
+創建一個名為 root.json 的文件，並使用以下示例 JSON 將公鑰的詳細信息寫入其中：
+
+{
+  "_type": "Root",
+  "version": 1,
+  "consistent_snapshot": true,
+  "expires": "2025-01-01T00:00:00Z",
+  "keys": {
+    "root": {
+      "keytype": "rsa",
+      "scheme": "rsassa-pss-sha256",
+      "keyid_hash_algorithms": ["sha256"],
+      "keyval": {
+        "public": "your-root-public-key"
+      }
+    }
+  }
+}
+請將 your-root-public-key 替換為您生成的 RSA 公鑰的 base64 編碼字符串。
+
+創建名為 config.json 的文件，並使用以下示例 JSON 編輯該文件：
+
+{
+  "repository": {
+    "metadata_directory": "/tuf_repo/metadata",
+    "targets_directory": "/tuf_repo/targets",
+    "version": 1,
+    "consistent_snapshot": true,
+    "snapshot_threshold": 86400,
+    "root_keys": [
+      "/tuf_repo/metadata/root.pub"
+    ],
+    "mirrors": {
+      "mirror1": {
+        "url_prefix": "http://localhost:8080",
+        "metadata_path": "metadata",
+        "targets_path": "targets",
+        "confined_target_dirs": [
+          "targets/*"
+        ]
+      }
+    }
+  },
+  "logging": {
+    "disable_file_logging": true
+  }
+}
+這個 config.json 配置文件中包含有關 tuf repository 和 mirror1 的配置信息。其中，mirror1 將會用於之後使用的 tuf mirror server。
+
+最後，使用以下命令初始化 tuf repository：
+
+go-tuf init -config /tuf_repo/config.json
+完成 tuf init 後，您可以使用以下命令啟動 tuf server：
+
+go-tuf server -config /tuf_repo/config.json -local-address :8080
+
+如果您想在容器外部訪問 tuf server，您需要將容器的端口映射到主機的端口。例如，如果您要將容器內的 8080 端口映射到主機的 8080 端口，您可以在運行容器時使用 -p 參數指定映射，例如：
+
+docker run -p 8080:8080 your-image
+這樣，主機上的 8080 端口就會轉發到容器內的 8080 端口。此時，您可以使用以下命令驗證 tuf server 是否運行正常：
+
+curl http://localhost:8080/metadata/root.json
+如果 tuf server 正常運行，則會顯示 root.json 文件的內容。接下來，您可以使用 cosign 工具指定 tuf mirror server 的 URL，例如：
+
+cosign init --tuf-server http://localhost:8080 --tuf-repo mirror1
+這樣，cosign 工具就會使用 http://localhost:8080 作為 tuf mirror server 的 URL，使用 mirror1 作為 tuf repository 的名稱。您可以在 cosign 工具中使用指定的 tuf repository 來驗證容器鏡像的數字簽名。
+
+
+
+
+
+
+
+
+
+TUF repository 中的元數據由以下三個部分組成：
+
+Root metadata（根元數據）：根元數據是 TUF repository 中的最高級別元數據，用於描述 TUF repository 的結構和安全性設置。在初始化 TUF repository 時，您需要使用 tuf init 命令來創建根元數據，並指定根元數據中包含的信任密鑰。
+
+Snapshot metadata（快照元數據）：快照元數據是 TUF repository 中的中級元數據，用於描述鏡像數字簽名的列表和版本號。在每次更新 TUF repository 中的鏡像數字簽名時，您需要使用 tuf create 命令來創建一個新的快照元數據，並將其添加到 TUF repository 中。
+
+Targets metadata（目標元數據）：目標元數據是 TUF repository 中的低級元數據，用於描述鏡像數字簽名的詳細信息，包括鏡像文件的哈希值和大小。在每次更新 TUF repository 中的鏡像數字簽名時，您需要使用 tuf create 命令來創建一個新的目標元數據，並將其添加到 TUF repository 中。
+
+在每次更新 TUF repository 中的鏡像數字簽名時，您需要使用 tuf create 命令來生成新的快照元數據和目標元數據，並使用 tuf push 命令將它們上傳到 TUF server 上。這樣，在下次更新 TUF repository 時，cosign 工具就可以使用最新的元數據來驗證鏡像的數字簽名了。
+
+
+使用 cosign sign 命令为一个镜像生成签名时，Cosign 会自动生成一些签名相关的元数据，包括目标文件和快照文件。目标文件签名和快照文件签名都会被写入一个名为 cosign.targets 的文件中。您可以通过将该文件上传到 TUF 服务器上的 targets 目录中来上传目标文件签名。而快照文件签名则会被写入一个名为 cosign.snapshot 的文件中，您可以使用 tuf upload 命令将其上传到 TUF 服务器的 snapshot 目录中。
+
