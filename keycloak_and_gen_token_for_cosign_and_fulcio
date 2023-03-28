@@ -1,0 +1,185 @@
+docker run --name mykeycloak -p 80:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin -e KEYCLOAK_HTTPS_PORT="" -e KEYCLOAK_FRONTEND_URL=http://34.80.154.115/auth jboss/keycloak
+
+docker exec -it 3c9d4369d699 /opt/jboss/keycloak/bin/add-user-keycloak.sh -u admin -p admin
+
+修改standalone.xml的bind為0.0.0.0
+
+docker cp standalone.xml 3c9d4369d699:/opt/jboss/keycloak/standalone/configuration/
+
+docker exec -it 3c9d4369d699 /opt/jboss/keycloak/bin/jboss-cli.sh --connect command=:reload
+
+exec 到container內
+/opt/jboss/keycloak/bin
+
+./kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user admin
+
+./kcadm.sh update realms/master -s sslRequired=NONE
+
+
+./kcadm.sh create realms -s realm=myrealm -s enabled=true
+
+./kcadm.sh create clients -r myrealm -s clientId=myclient -s secret=mysecret -s directAccessGrantsEnabled=true
+
+./kcadm.sh create users -r myrealm -s username=myuser -s enabled=true
+
+./kcadm.sh set-password -r myrealm --username myuser --new-password mypassword
+
+
+auth:
+  provider: keycloak
+  keycloak:
+    auth-server-url: https://keycloak.example.com/auth
+    realm: fulcio
+    client-id: fulcio-client
+    client-secret: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+可能會長這樣
+apiVersion: v1
+data:
+  fulcio.yaml: |
+    auth:
+      provider: keycloak
+      keycloak:
+        auth-server-url: https://keycloak.example.com/auth
+        realm: fulcio
+        client-id: fulcio-client
+        client-secret: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+kind: ConfigMap
+metadata:
+  name: fulcio-config
+
+
+
+
+確認 "Access Type" 設置為 "confidential"，並且 "Standard Flow Enabled"、"Implicit Flow Enabled" 和 "Direct Access Grants Enabled" 設置為 "ON"。
+
+滾動到頁面底部，找到 "Valid Redirect URIs" 選項。確保在此處設置了應用程序的有效重定向 URI。如果您的應用程序是在本地運行的，您可以設置此值為 "http://localhost:8080/*"（請根據您的實際情況進行修改）。
+
+"Access Type"：必須設置為 "confidential"。
+
+"Standard Flow Enabled"：必須設置為 "ON"。
+
+"Implicit Flow Enabled"：必須設置為 "ON"。
+
+"Direct Access Grants Enabled"：必須設置為 "ON"。
+
+"Valid Redirect URIs"：必須設置為應用程序的有效重定向 URI。
+
+"Client Protocol"：可以設置為 "openid-connect"。
+
+在 Keycloak 的管理界面中，選擇左側菜單中的 "Clients"，然後選擇您的 Client。
+
+在 "Settings" 頁面上，將 "Service Accounts Enabled" 選項設置為 "ON"。
+
+確定您的更改，然後再次嘗試使用上述 cURL 命令進行驗證。
+
+
+取得access token方式
+curl -X POST   'http://127.0.0.1:80/auth/realms/myrealm/protocol/openid-connect/token'   -H 'Content-Type: application/x-www-form-urlencoded'   -d 'client_id=myclient&client_secret=1m14i38Jgn1fZVmka51cVeJ6kbU7OY1I&grant_type=client_credentials'
+
+
+----------------------------------------------------------------------------------------
+
+curl -X POST \
+  https://<keycloak-url>/auth/admin/realms/<realm-name>/client-scopes \
+  -H 'Authorization: Bearer <admin-access-token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "My Client Scope",
+  "description": "Description of My Client Scope",
+  "protocol": "openid-connect",
+  "attributes": {
+    "include.in.token.scope": "true",
+    "display.on.consent.screen": "true"
+  },
+  "protocolMappers": [
+    {
+      "name": "My Mapper",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-usermodel-property-mapper",
+      "config": {
+        "user.attribute": "my-attribute",
+        "claim.name": "my-claim",
+        "jsonType.label": "String"
+      }
+    }
+  ],
+  "clientScopeMappings": {
+    "client1": true,
+    "client2": true
+  }
+}'
+
+
+curl -X PUT \
+  https://<keycloak-url>/auth/admin/realms/<realm-name>/client-scopes/<client-scope-id>/protocol-mappers/models \
+  -H 'Authorization: Bearer <admin-access-token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "My Mapper",
+  "protocol": "openid-connect",
+  "protocolMapper": "oidc-audience-mapper",
+  "consentRequired": false,
+  "config": {
+    "included.client.audience": "<fulcio-client-id>"
+  }
+}'
+
+
+以上需要配合admin access token
+取得方式如下
+通過瀏覽器打開 Keycloak 管理員控制台，然後登錄。
+在瀏覽器中打開開發人員工具（如 Google Chrome 中的開發人員控制台）。
+選擇網絡選項卡，在選擇客戶端之前，點擊"Preserve log"選項，以保留日誌。
+選擇要訪問的客戶端，例如 Master realm。
+在選擇客戶端後，將在日誌中看到網絡請求。
+找到 admin token 網絡請求，並在標頭中查找 admin access token 的值。
+將 admin access token 複製到你的應用程序中，以使用它來訪問 Keycloak API。
+----------------------------------------------------------------------------------------
+
+
+驗證方式
+curl -H "Authorization: Bearer <access-token>" https://fulcio.example.com/api/my-resource
+
+
+
+
+
+
+
+variables:
+  KEYCLOAK_AUTH_SERVER_URL: "https://keycloak.example.com/auth"
+  KEYCLOAK_REALM: "fulcio"
+  KEYCLOAK_CLIENT_ID: "fulcio-client"
+  KEYCLOAK_CLIENT_SECRET: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+stages:
+  - cosign
+  - sign
+
+cosign:
+  stage: cosign
+  image: docker.io/sigstore/cosign:v1.2.1
+  script:
+    # authenticate with Keycloak and get the access token
+    export ACCESS_TOKEN=$(curl -s -X POST \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      -d "grant_type=client_credentials" \
+      -d "client_id=${KEYCLOAK_CLIENT_ID}" \
+      -d "client_secret=${KEYCLOAK_CLIENT_SECRET}" \
+      "${KEYCLOAK_AUTH_SERVER_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" | jq -r '.access_token')
+
+    # retrieve the private key from Fulcio using the access token
+    export PRIVATE_KEY=$(curl -s -H "Authorization: Bearer ${ACCESS_TOKEN}" https://fulcio.example.com/api/v1/signingCert -o -)
+
+    # sign the image using cosign
+    cosign sign -key "${PRIVATE_KEY}" myregistry/myimage:latest
+
+sign:
+  stage: sign
+  # your image signing steps here
+
+
+自動帶入的方法
+cosign sign -key path/to/private/key -passphrase $PRIVATE_KEY_PASSPHRASE path/to/image:tag
+
