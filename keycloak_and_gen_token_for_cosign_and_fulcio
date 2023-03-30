@@ -1,3 +1,6 @@
+
+jboss/keycloak@sha256:abdb1aea6c671f61a594af599f63fbe78c9631767886d9030bc774d908422d0a
+
 docker run --name mykeycloak -p 80:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin -e KEYCLOAK_HTTPS_PORT="" -e KEYCLOAK_FRONTEND_URL=http://34.80.154.115/auth jboss/keycloak
 
 docker exec -it 3c9d4369d699 /opt/jboss/keycloak/bin/add-user-keycloak.sh -u admin -p admin
@@ -182,4 +185,6 @@ sign:
 
 自動帶入的方法
 cosign sign -key path/to/private/key -passphrase $PRIVATE_KEY_PASSPHRASE path/to/image:tag
+
+
 
