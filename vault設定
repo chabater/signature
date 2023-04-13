@@ -1,0 +1,146 @@
+是的，您可以使用 Vault 命令來調整 policy、token 和 entity。以下是一些常見的 Vault 命令：
+
+調整 policy：
+
+vault policy read <policy_name>：讀取一個 policy 的內容。
+vault policy write <policy_name> <policy_file_path>：創建或更新一個 policy。
+vault policy delete <policy_name>：刪除一個 policy。
+調整 token：
+
+vault token create -policy=<policy_name>：創建一個 token，並為其授予一個指定的 policy。
+vault token lookup <token_id>：查找一個指定的 token。
+vault token revoke <token_id>：撤銷一個指定的 token。
+vault token renew <token_id>：更新一個指定的 token 的過期時間。
+調整 entity：
+
+vault write identity/entity name=<entity_name> policies=<policy_name>：創建或更新一個 entity，並為其分配一個指定的 policy。
+vault delete identity/entity/name/<entity_name>：刪除一個指定的 entity。
+請注意，在使用這些命令時，請務必小心。尤其是在刪除 policy、token 或 entity 時，請確認您的操作是正確的，以避免不必要的數據損失或安全漏洞。
+
+
+
+要為一個 token 分配一個指定的 entity 和 policy，您可以使用以下命令：
+
+vault token create -policy=<policy_name> -entity-id=<entity_id>
+其中 <policy_name> 是您想要分配給該 token 的 policy 的名稱，<entity_id> 是您想要分配給該 token 的 entity 的 ID。
+
+請注意，在使用此命令之前，您需要確保已經創建了相應的 entity 和 policy。如果您需要創建一個新的 entity，請使用以下命令：
+
+vault write identity/entity name=<entity_name> policies=<policy_name>
+其中 <entity_name> 是您想要創建的 entity 的名稱，<policy_name> 是您想要分配給該 entity 的 policy 的名稱。
+
+當您成功創建了一個 entity 後，您可以使用以下命令查找其 ID：
+
+vault read identity/entity/name/<entity_name>
+其中 <entity_name> 是您要查找的 entity 的名稱。該命令將返回與該 entity 相關的詳細信息，包括其 ID。
+
+一旦您已經創建了相應的 entity 和 policy，並找到了相應的 ID，您就可以使用 vault token create 命令為該 token 分配指定的 entity 和 policy 了。
+
+
+
+要刪除一個 token 的其中一個 policy，您可以使用以下步驟：
+
+獲取要更新的 token 的 accessor ID。您可以使用以下命令：
+
+vault token lookup -format=json <token_id> | jq -r '.accessor'
+其中 <token_id> 是您要更新的 token 的 ID。此命令將返回該 token 的 accessor ID。
+
+獲取要刪除的 policy 的名稱。您可以使用以下命令：
+
+vault token lookup -format=json <token_id> | jq -r '.policies[]'
+其中 <token_id> 是您要更新的 token 的 ID。此命令將返回該 token 持有的所有 policy 的名稱。
+
+從 token 的 policy 列表中刪除要刪除的 policy。您可以使用以下命令：
+
+vault token update -accessor=<accessor_id> -policy=<policy1,policy2,...>
+其中 <accessor_id> 是您在第 1 步中獲取的 token 的 accessor ID，<policy1,policy2,...> 是一個逗號分隔的 policy 列表，其中不包括要刪除的 policy。
+
+例如，假設您要刪除一個名為 my-policy 的 policy，並且您已經獲取了要更新的 token 的 accessor ID，則可以使用以下命令：
+
+vault token update -accessor=<accessor_id> -policy=<policy1,policy3>
+這將從該 token 的 policy 列表中刪除 my-policy。
+
+請注意，在更新 token 的 policy 列表時，您需要指定該 token 的所有 policy，而不僅僅是要刪除的那個。因此，在第 3 步中，您需要指定一個包含所有剩餘 policy 的逗號分隔列表。
+
+
+
+
+
+
+您可以使用以下步驟來設置這樣的 Vault 部署：
+
+創建一個服務專用的 token：
+
+vault token create -policy=<policy_name> -orphan
+這將創建一個只具有指定 policy 的孤立 token。這個 token 無法繼承其他身份和權限，且不會被自動撤銷。
+
+創建一個 secret engine：
+
+vault secrets enable -path=<path> <engine_name>
+您可以使用 path 參數指定此 secret engine 的路徑，engine_name 參數是您想要啟用的 secret engine 名稱。
+
+為服務專用 token 設置 policy：
+
+vault token policy set <policy_name> -path=<path> <policy.hcl>
+您可以使用 policy_name 參數指定此 policy 的名稱，path 參數是此 policy 將用於的路徑，policy.hcl 是您的 policy 配置。
+
+為服務專用 token 創建子 token：
+
+vault token create -policy=<policy_name> -ttl=<ttl> -renewable=true -format=json
+您可以使用 policy_name 參數指定此子 token 的 policy，ttl 參數是此子 token 的生存期，renewable 參數指定此子 token 是否可續期。此命令將返回 JSON 格式的子 token 信息，包括 token 和 accessor 等。
+
+設置 secret engine 的 policy：
+
+vault secrets tune -default-lease-ttl=<ttl> -max-lease-ttl=<ttl> <path>
+vault policy write <policy_name> - <<EOF
+path "<path>/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+EOF
+vault token create -policy=<policy_name> -format=json
+您可以使用 default-lease-ttl 和 max-lease-ttl 參數設置此 secret engine 的租約生存期。然後，使用 vault policy write 命令為此 secret engine 創建一個 policy，並使用 vault token create 命令創建一個 token，該 token 具有此 policy。
+
+將子 token 與 secret engine 的 policy 關聯：
+
+vault token create -policy=<policy_name> -renewable=true -ttl=<ttl> -format=json | \
+jq -r '.auth.client_token' > /tmp/token
+vault token create -policy=<policy_name> -orphan -format=json | \
+jq -r '.auth.client_token' > /tmp/policy_token
+vault token create -policy=<policy_name> -renewable=true -ttl=<ttl> -format=json | \
+jq -r '.auth.client_token' > /tmp/child_token
+vault token create
+
+
+接著，您可以使用以下命令來為服務token設置policy：
+
+vault policy write my_service_policy - <<EOF
+path "secret/data/my_engine/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+EOF
+
+vault token create -policy=my_service_policy -ttl=1h -renewable=true
+這個policy設置了對secret/data/my_engine/*路徑的存取權限，您可以根據您的需求修改它。接下來，您需要設置這個服務token的secret engine：
+
+vault secrets enable -path=my_engine -version=2 kv
+然後，您可以為服務token創建子token：
+
+vault token create -policy=my_service_policy -ttl=15m -renewable=true -metadata=engine=my_engine
+您可以使用這個子token來創建key以及對應的token，例如：
+
+vault kv put secret/my_engine/my_key my_value token=my_engine_token
+這樣，只有持有my_engine_token的使用者才能夠讀取、寫入、更新和刪除secret/data/my_engine/*中的數據，而且他們只能訪問與my_engine_token關聯的key。
+
+
+
+
+
+創建一個專用的policy，用於限制service token和key1 token、key2 token的訪問權限。
+
+創建一個service token，並綁定剛剛創建的policy。
+
+使用service token創建一個secret engine，設置該engine只能被該service token訪問。
+
+使用service token創建key1 token和key2 token，設置該token的policy只能訪問剛剛創建的secret engine。
+
+將key1 token和key2 token發送給使用者，讓他們使用這些token來訪問secret engine。
